@@ -84,7 +84,17 @@ function BayesCard({ notify, apiBase }: any) {
             : 'El backend no pudo calcular la probabilidad.'
         );
       }
-             e instanceof Error
+
+      const posterior = Number(data.posterior);
+      if (!Number.isFinite(posterior) || posterior < 0 || posterior > 100) {
+        throw new Error('El backend devolvió un resultado no válido.');
+      }
+
+      setResult(posterior);
+      notify('Probabilidad calculada por el backend de SalesIA.');
+    } catch (e) {
+      setError(
+       e instanceof Error
           ? e.message
           : 'No se pudo conectar con el servidor de Render.'
       );
@@ -148,7 +158,7 @@ function BayesCard({ notify, apiBase }: any) {
             <div>
               <b>No se pudo calcular</b>
               <p>{error}</p>
-            </div>
+              </div>
           </div>
         )}
 
