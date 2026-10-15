@@ -41,173 +41,56 @@ export default function App(){
 function Kpi({icon,label,value,change,note,positive=true}:any){return <div className="kpi-card"><div className="kpi-top"><div className="kpi-icon">{icon}</div><button className="dots-btn"><MoreHorizontal size={18}/></button></div><div className="kpi-label">{label}</div><div className="kpi-value">{value}</div><div className="kpi-foot"><span className={`kpi-change ${positive?'up':'down'}`}>{positive?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {change}</span><span>{note}</span></div></div>}
 function Legend({color,label,value,percent}:any){return <div className="legend-row"><span className="legend-name"><i style={{background:color}}/>{label}</span><span className="legend-values"><b>{value}</b><small>{percent}</small></span></div>}
 function SalesTable({sales,onClick,full=false}: {sales:Sale[],onClick:()=>void,full?:boolean}){return <div className="table-scroll"><table><thead><tr><th>N.º DE VENTA</th><th>CLIENTE</th><th>FECHA</th><th>ESTADO</th><th className="right">IMPORTE TOTAL</th><th></th></tr></thead><tbody>{sales.map(s=><tr key={s.id} onClick={onClick} className={full?'clickable-row':''}><td><span className="sale-id">{s.id}</span></td><td><div className="customer-cell"><div className="table-avatar">{s.customer.split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div><b>{s.customer}</b><small>{s.items} {s.items===1?'artículo':'artículos'}</small></div></div></td><td className="muted-cell">{s.date}</td><td><span className={`status ${s.status==='Pagada'?'status-paid':s.status==='Pendiente'?'status-pending':'status-cancelled'}`}><i/>{s.status}</span></td><td className="right money-cell">{money(s.total)}</td><td><button className="dots-btn" onClick={e=>{e.stopPropagation();onClick()}}><MoreHorizontal size={18}/></button></td></tr>)}</tbody></table>{sales.length===0&&<div className="empty-table">No hay ventas que coincidan con la búsqueda.</div>}</div>}
+type BayesSalesAnalysis = {
+  available: boolean;
+  message?: string;
+  sales_analyzed?: number;
+  repeat_customer_sales?: number;
+  high_value_threshold?: number;
+  high_value_sales?: number;
+  prior?: number;
+  likelihood?: number;
+  false_positive?: number;
+  posterior?: number;
+  interpretation?: string;
+};
+
 function BayesCard({ notify, apiBase }: any) {
-  const [prior, setPrior] = useState(30);
-  const [likelihood, setLikelihood] = useState(70);
-  const [falsePositive, setFalsePositive] = useState(15);
-  const [result, setResult] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<BayesSalesAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const calculate = async () => {
+  const loadAnalysis = async () => {
     if (!apiBase) {
       setError('Falta configurar VITE_API_URL con la URL pública de Render.');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
-      const response = await fetch(`${apiBase}/probability/bayes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prior,
-          likelihood,
-          false_positive: falsePositive
-        })
-      });
-
-      const data = await response.json();
-
+      const response = await fetch(`${apiBase}/probability/bayes/sales-analysis`);
+      const data: BayesSalesAnalysis = await response.json();
       if (!response.ok) {
-        throw new Error(
-          typeof data.detail === 'string'
-            ? data.detail
-            : 'El backend no pudo calcular la probabilidad.'
-        );
+        throw new Error(typeof (data as any).detail === 'string' ? (data as any).detail : 'No se pudo analizar las ventas.');
       }
-
-      const posterior = Number(data.posterior);
-      if (!Number.isFinite(posterior) || posterior < 0 || posterior > 100) {
-        throw new Error('El backend devolvió un resultado no válido.');
-      }
-
-      setResult(posterior);
-      notify('Probabilidad calculada por el backend de SalesIA.');
+      setAnalysis(data);
+      if (data.available) notify('Análisis de Bayes actualizado con las ventas registradas.');
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'No se pudo conectar con el servidor de Render.'
-      );
+      setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.');
+      setAnalysis(null);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => { void loadAnalysis(); }, [apiBase]);
+
+  const result = analysis?.available && typeof analysis.posterior === 'number' ? analysis.posterior : null;
+  const percent = (value?: number) => typeof value === 'number' ? `${value.toFixed(2)}%` : '—';
 
   return (
     <div className="bayes-layout">
       <section className="panel bayes-form">
         <div className="panel-head">
           <div>
-            <h3>Calculadora de Bayes</h3>
-            <p>Introduce las probabilidades del escenario comercial.</p>
-          </div>
-          <div className="bayes-badge"><Calculator size={17} /></div>
-        </div>
-
-        <div className="info-note compact">
-          <CircleHelp size={17} />
-          <div>
-            <b>¿Qué vamos a calcular?</b>
-            <p>La probabilidad de que ocurra un evento A dado que se ha observado B.</p>
-          </div>
-        </div>
-
-        <RangeField
-          label="Probabilidad previa P(A)"
-          value={prior}
-          setValue={(value: number) => {
-            setPrior(value);
-            setResult(null);
-          }}
-          description="Probabilidad inicial del evento antes de observar la evidencia."
-        />
-
-        <RangeField
-          label="Probabilidad P(B | A)"
-          value={likelihood}
-          setValue={(value: number) => {
-            setLikelihood(value);
-            setResult(null);
-          }}
-          description="Probabilidad de observar la evidencia si A ocurre."
-        />
-
-        <RangeField
-          label="Probabilidad P(B | no A)"
-          value={falsePositive}
-          setValue={(value: number) => {
-            setFalsePositive(value);
-            setResult(null);
-          }}
-          description="Probabilidad de observar la evidencia si A no ocurre."
-        />
-
-        {error && (
-          <div className="info-note compact">
-            <AlertCircle size={17} />
-            <div>
-              <b>No se pudo calcular</b>
-              <p>{error}</p>
-            </div>
-          </div>
-        )}
-
-        <button
-          className="btn btn-primary full-btn"
-          onClick={calculate}
-          disabled={loading}
-        >
-          <Calculator size={16} />
-          {loading ? 'Calculando en el servidor...' : 'Calcular con el servidor'}
-        </button>
-      </section>
-
-      <section className="panel bayes-result">
-        <div className="result-top">
-          <div className="result-icon"><Sparkles size={20} /></div>
-          <span>RESULTADO DEL ANÁLISIS</span>
-        </div>
-
-        <div className="result-number">
-          {result === null ? '—' : result.toFixed(2)}
-          {result !== null && <small>%</small>}
-        </div>
-
-        <h3>Probabilidad posterior P(A | B)</h3>
-        <p>
-          {result === null
-            ? 'Introduce los valores y pulsa calcular para consultar el resultado del backend.'
-            : 'Resultado calculado por el servicio estadístico de SalesIA.'}
-        </p>
-
-        <div className="probability-track">
-          <div style={{ width: `${result ?? 0}%` }} />
-        </div>
-
-        <div className="probability-labels">
-          <span>0%</span>
-          <b>{result === null ? 'Sin calcular' : `${result.toFixed(2)}%`}</b>
-          <span>100%</span>
-        </div>
-
-        <div className="formula">
-          <span>Teorema de Bayes</span>
-          <b>P(A|B) = P(B|A) × P(A) / P(B)</b>
-        </div>
-
-        <div className="result-caveat">
-          <AlertCircle size={16} />
-          <span>
-            El cálculo se ejecuta en Render. Este módulo todavía no guarda
-            un historial de análisis en PostgreSQL.
-          </span>
-        </div>
-      </section>
-    </div>
-  );
-}
-function RangeField({label,value,setValue,description}:any){return <div className="range-field"><div className="range-title"><label>{label}</label><b>{value}%</b></div><input type="range" min="0" max="100" value={value} onChange={e=>setValue(Number(e.target.value))}/><p>{description}</p></div>}
+            <h3>Bayes conectado a ventas</h3>
