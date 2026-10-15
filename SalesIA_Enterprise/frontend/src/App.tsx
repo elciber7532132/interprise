@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Activity, AlertCircle, ArrowDownRight, ArrowUpRight, Bell, Boxes, BriefcaseBusiness, Calculator, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, CircleHelp, ClipboardList, CreditCard, Download, FileBarChart, FileText, Filter, LayoutDashboard, Lightbulb, LogOut, Menu, MoreHorizontal, Package, Plus, Search, Settings, ShieldCheck, ShoppingBag, ShoppingCart, SlidersHorizontal, Sparkles, TrendingUp, Users, X, Zap } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 
-type Customer={id:number,name:string,doc:string,type:string,email:string,phone:string,address:string}; type Product={id:number,name:string,sku:string,category:string,price:number,stock:number}; type Sale={id:string,customer:string,date:string,status:string,total:number,items:number};
+type Customer={id:number,name:string,doc:string,type:string,email:string,phone:string,address:string}; type Product={id:number,name:string,sku:string,category:string,price:number,stock:number}; type Sale={id:string,customer:string,date:string,status:string,total:number,items:number,document_type?:string,documentType?:string};
 const initialCustomers:Customer[]=[{id:1,name:'Comercial Andina S.A.C.',doc:'20604578123',type:'Empresa',email:'compras@andina.pe',phone:'(01) 445-8832',address:'Av. Javier Prado 1840, San Isidro, Lima'},{id:2,name:'Inversiones del Pacífico E.I.R.L.',doc:'20517893461',type:'Empresa',email:'administracion@pacifico.pe',phone:'(01) 441-7620',address:'Av. La Marina 2250, San Miguel, Lima'},{id:3,name:'María Fernanda Torres',doc:'46892157',type:'Persona',email:'maria.torres@email.com',phone:'987 654 321',address:'Calle Los Olivos 324, Miraflores, Lima'},{id:4,name:'Grupo Horizonte Perú S.A.C.',doc:'20608912456',type:'Empresa',email:'contacto@horizonte.pe',phone:'(01) 505-1290',address:'Jr. Las Begonias 475, Surco, Lima'}];
 const initialProducts:Product[]=[{id:1,name:'Laptop empresarial Pro 14',sku:'TEC-001',category:'Tecnología',price:3299,stock:24},{id:2,name:'Monitor profesional 27”',sku:'TEC-002',category:'Tecnología',price:899,stock:18},{id:3,name:'Silla ergonómica ejecutiva',sku:'MOB-014',category:'Mobiliario',price:749,stock:7},{id:4,name:'Teclado inalámbrico Business',sku:'ACC-021',category:'Accesorios',price:149,stock:62},{id:5,name:'Estación de acoplamiento USB-C',sku:'TEC-031',category:'Tecnología',price:429,stock:3}];
 const initialSales:Sale[]=[{id:'VTA-2026-0084',customer:'Comercial Andina S.A.C.',date:'15 oct 2026',status:'Pagada',total:6598,items:2},{id:'VTA-2026-0083',customer:'Grupo Horizonte Perú S.A.C.',date:'15 oct 2026',status:'Pendiente',total:1798,items:2},{id:'VTA-2026-0082',customer:'María Fernanda Torres',date:'14 oct 2026',status:'Pagada',total:899,items:1},{id:'VTA-2026-0081',customer:'Inversiones del Pacífico E.I.R.L.',date:'13 oct 2026',status:'Anulada',total:1498,items:2},{id:'VTA-2026-0080',customer:'Comercial Andina S.A.C.',date:'12 oct 2026',status:'Pagada',total:4048,items:3}];
@@ -11,11 +11,17 @@ const money=(n:number)=>new Intl.NumberFormat('es-PE',{style:'currency',currency
 const nav=[{title:'GENERAL',items:[['Panel ejecutivo',LayoutDashboard],['Ventas',ShoppingCart]]},{title:'OPERACIONES',items:[['Inventario',Boxes],['Vendedores',BriefcaseBusiness]]},{title:'INTELIGENCIA COMERCIAL',items:[['Analytics',Activity],['Probabilidad y Bayes',Calculator],['Insights',Lightbulb]]},{title:'GESTIÓN',items:[['Reportes',FileBarChart],['Seguridad',ShieldCheck]]}] as const;
 export default function App(){
  const [page,setPage]=useState('Panel ejecutivo'); const [customers,setCustomers]=useState(initialCustomers); const [products,setProducts]=useState(initialProducts); const [sales,setSales]=useState(initialSales); const [search,setSearch]=useState(''); const [modal,setModal]=useState<'sale'|'customer'|'product'|null>(null); const [pickSearch,setPickSearch]=useState(''); const [selectedCustomer,setSelectedCustomer]=useState<Customer|null>(null); const [cart,setCart]=useState<{product:Product,qty:number}[]>([]); const [toast,setToast]=useState(''); const [mobileNav,setMobileNav]=useState(false); const [range,setRange]=useState('Últimos 6 meses'); const [docType,setDocType]=useState('Factura'); const [discount,setDiscount]=useState(0);
+ const [showSalesFilters,setShowSalesFilters]=useState(false); const [salesSearch,setSalesSearch]=useState(''); const [salesDateFrom,setSalesDateFrom]=useState(''); const [salesDateTo,setSalesDateTo]=useState(''); const [salesNumber,setSalesNumber]=useState(''); const [salesCustomer,setSalesCustomer]=useState(''); const [salesStatus,setSalesStatus]=useState(''); const [salesDocumentType,setSalesDocumentType]=useState(''); const [salesMinAmount,setSalesMinAmount]=useState(''); const [salesMaxAmount,setSalesMaxAmount]=useState(''); const [salesSort,setSalesSort]=useState('date-desc');
  const subtotal=cart.reduce((s,x)=>s+x.product.price*x.qty,0); const tax=(subtotal-discount)*.18; const total=subtotal-discount+tax;
  const API_BASE=(import.meta.env.VITE_API_URL||'').replace(/\/$/,'');
  useEffect(()=>{let active=true;const load=async()=>{try{const [c,p,v]=await Promise.all([fetch(`${API_BASE}/customers`),fetch(`${API_BASE}/products`),fetch(`${API_BASE}/sales`)]);if(!c.ok||!p.ok||!v.ok)throw new Error('API no disponible');const [cs,ps,vs]=await Promise.all([c.json(),p.json(),v.json()]);if(!active)return;setCustomers(cs);setProducts(ps);setSales(vs);setToast('Datos cargados desde el servidor.');window.setTimeout(()=>{if(active)setToast('')},2200)}catch{ /* Mantiene los datos de demostración si aún no se configuró la API. */}};load();return()=>{active=false}},[]);
  const notify=(s:string)=>{setToast(s);window.setTimeout(()=>setToast(''),2800)};
- const filteredSales=sales.filter(s=>(s.id+' '+s.customer+' '+s.status).toLowerCase().includes(search.toLowerCase()));
+ const normalizeSalesText=(value:unknown)=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+ const salesDateISO=(value:string)=>{if(!value)return '';const input=value.trim();const iso=input.match(/^(\d{4})-(\d{2})-(\d{2})/);if(iso)return `${iso[1]}-${iso[2]}-${iso[3]}`;const numeric=input.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);if(numeric)return `${numeric[3]}-${numeric[2].padStart(2,'0')}-${numeric[1].padStart(2,'0')}`;const months:Record<string,string>={ene:'01',enero:'01',feb:'02',febrero:'02',mar:'03',marzo:'03',abr:'04',abril:'04',may:'05',mayo:'05',jun:'06',junio:'06',jul:'07',julio:'07',ago:'08',agosto:'08',sep:'09',set:'09',septiembre:'09',setiembre:'09',oct:'10',octubre:'10',nov:'11',noviembre:'11',dic:'12',diciembre:'12'};const spanish=input.toLowerCase().match(/^(\d{1,2})\s+([a-záéíóú]+)\.?\s+(\d{4})$/);if(spanish){const month=months[normalizeSalesText(spanish[2])];if(month)return `${spanish[3]}-${month}-${spanish[1].padStart(2,'0')}`}return '';};
+ const getSaleDocument=(sale:Sale)=>sale.document_type||sale.documentType||'';
+ const invalidSalesAmount=salesMinAmount!==''&&salesMaxAmount!==''&&Number(salesMinAmount)>Number(salesMaxAmount);
+ const filteredSales=useMemo(()=>{if(invalidSalesAmount)return [];const result=sales.filter(s=>{const date=salesDateISO(s.date);const text=normalizeSalesText(`${s.id} ${s.customer} ${s.status} ${getSaleDocument(s)}`);return (!salesSearch||text.includes(normalizeSalesText(salesSearch)))&&(!salesNumber||s.id.toLowerCase().includes(salesNumber.toLowerCase()))&&(!salesCustomer||s.customer===salesCustomer)&&(!salesStatus||normalizeSalesText(s.status)===normalizeSalesText(salesStatus))&&(!salesDocumentType||normalizeSalesText(getSaleDocument(s))===normalizeSalesText(salesDocumentType))&&(!salesDateFrom||(date!==''&&date>=salesDateFrom))&&(!salesDateTo||(date!==''&&date<=salesDateTo))&&(salesMinAmount===''||s.total>=Number(salesMinAmount))&&(salesMaxAmount===''||s.total<=Number(salesMaxAmount))});return result.sort((a,b)=>{if(salesSort==='date-asc')return salesDateISO(a.date).localeCompare(salesDateISO(b.date));if(salesSort==='date-desc')return salesDateISO(b.date).localeCompare(salesDateISO(a.date));if(salesSort==='amount-asc')return a.total-b.total;if(salesSort==='amount-desc')return b.total-a.total;if(salesSort==='number-asc')return a.id.localeCompare(b.id,undefined,{numeric:true});if(salesSort==='number-desc')return b.id.localeCompare(a.id,undefined,{numeric:true});return 0})},[sales,salesSearch,salesNumber,salesCustomer,salesStatus,salesDocumentType,salesDateFrom,salesDateTo,salesMinAmount,salesMaxAmount,salesSort,invalidSalesAmount]);
+ const clearSalesFilters=()=>{setSalesSearch('');setSalesDateFrom('');setSalesDateTo('');setSalesNumber('');setSalesCustomer('');setSalesStatus('');setSalesDocumentType('');setSalesMinAmount('');setSalesMaxAmount('');setSalesSort('date-desc')};
  const addProduct=(p:Product)=>{setCart(prev=>{const found=prev.find(x=>x.product.id===p.id);return found?prev.map(x=>x.product.id===p.id?{...x,qty:x.qty+1}:x):[...prev,{product:p,qty:1}]});setModal('sale');setPickSearch('')};
  const addSale=async()=>{if(!selectedCustomer||cart.length===0){notify('Selecciona un cliente y al menos un producto.');return}try{if(API_BASE){const response=await fetch(`${API_BASE}/sales`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_id:selectedCustomer.id,document_type:docType,issue_date:new Date().toISOString().slice(0,10),discount,tax_rate:0.18,items:cart.map(x=>({product_id:x.product.id,quantity:x.qty}))})});const body=await response.json();if(!response.ok)throw new Error(body.detail||'No se pudo registrar la venta.');const [sv,pr]=await Promise.all([fetch(`${API_BASE}/sales`),fetch(`${API_BASE}/products`)]);if(sv.ok)setSales(await sv.json());if(pr.ok)setProducts(await pr.json());}else{const sale:Sale={id:`VTA-2026-${String(85+sales.length-initialSales.length).padStart(4,'0')}`,customer:selectedCustomer.name,date:new Date().toLocaleDateString('es-PE',{day:'2-digit',month:'short',year:'numeric'}),status:'Pendiente',total,items:cart.reduce((a,x)=>a+x.qty,0)};setSales([sale,...sales]);setProducts(prev=>prev.map(p=>({...p,stock:Math.max(0,p.stock-(cart.find(c=>c.product.id===p.id)?.qty||0))})));}setCart([]);setSelectedCustomer(null);setModal(null);setPage('Ventas');notify('Venta registrada correctamente. Estado: pendiente de pago.')}catch(e){notify(e instanceof Error?e.message:'Error al conectar con el servidor.')}};
  const title=page; const subtitle:Record<string,string>={'Panel ejecutivo':'Una visión clara del rendimiento de tu negocio.','Ventas':'Administra órdenes, documentos, pagos y seguimiento comercial.','Inventario':'Control de existencias y movimientos de productos.','Vendedores':'Rendimiento comercial y seguimiento por vendedor.','Analytics':'Convierte las operaciones reales en decisiones basadas en datos.','Probabilidad y Bayes':'Explora probabilidades y escenarios comerciales.','Insights':'Hallazgos explicables basados en los resultados del negocio.','Reportes':'Consulta y prepara informes comerciales y estadísticos.','Seguridad':'Control de acceso, roles y trazabilidad de operaciones.'};
@@ -26,7 +32,7 @@ export default function App(){
  <div className="dashboard-grid"><section className="panel revenue-panel"><div className="panel-head"><div><h3>Evolución de ventas</h3><p>Ingresos registrados por mes</p></div><button className="dots-btn" onClick={()=>notify('Opciones de gráfico')}><MoreHorizontal size={19}/></button></div><div className="chart-legend"><span><i className="legend-dot cyan"/> Ingresos</span><span className="chart-total">S/ 52,780 <em><ArrowUpRight size={13}/> 18.6%</em></span></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend} margin={{top:10,right:5,left:0,bottom:0}}><defs><linearGradient id="fillSales" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#16b8c8" stopOpacity={.22}/><stop offset="95%" stopColor="#16b8c8" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#e9eef4"/><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill:'#8794a7',fontSize:12}} dy={10}/><YAxis axisLine={false} tickLine={false} tick={{fill:'#8794a7',fontSize:11}} tickFormatter={v=>`${v/1000}k`} width={36}/><Tooltip formatter={(v)=>money(Number(v))} contentStyle={{border:'1px solid #e6edf4',borderRadius:10,fontSize:12}}/><Area type="monotone" dataKey="ventas" stroke="#11aebe" strokeWidth={2.5} fill="url(#fillSales)" activeDot={{r:5,strokeWidth:0}}/></AreaChart></ResponsiveContainer></div><div className="chart-bottom"><span><i className="legend-dot cyan"/> Ingresos por ventas</span><span>Moneda: PEN (S/)</span></div></section>
  <section className="panel orders-panel"><div className="panel-head"><div><h3>Actividad de ventas</h3><p>Estado de las operaciones</p></div><button className="dots-btn" onClick={()=>setPage('Ventas')}><MoreHorizontal size={19}/></button></div><div className="donut-wrap"><div className="donut"><div className="donut-center"><b>247</b><span>Ventas</span></div></div><div className="donut-legend"><Legend color="#16b8c8" label="Pagadas" value="176" percent="71.3%"/><Legend color="#4779d8" label="Pendientes" value="48" percent="19.4%"/><Legend color="#e8edf3" label="Anuladas" value="23" percent="9.3%"/></div></div><button className="text-link" onClick={()=>setPage('Ventas')}>Ver todas las ventas <ChevronRight size={15}/></button></section></div>
  <div className="section-head recent-head"><div><h2>Ventas recientes</h2><p>Últimas operaciones registradas en el sistema</p></div><button className="text-link" onClick={()=>setPage('Ventas')}>Ver todas <ChevronRight size={15}/></button></div><SalesTable sales={sales.slice(0,4)} onClick={()=>setPage('Ventas')}/><div className="bottom-grid"><section className="panel mini-panel"><div className="panel-head"><div><h3>Productos destacados</h3><p>Por unidades disponibles</p></div><button className="dots-btn" onClick={()=>setPage('Inventario')}><MoreHorizontal size={18}/></button></div>{products.slice(0,3).map((p,i)=><div className="product-line" key={p.id}><div className={`product-icon p${i}`}><Package size={17}/></div><div className="product-name"><b>{p.name}</b><span>{p.sku}</span></div><div className="product-stock"><b>{p.stock}</b><span>unidades</span></div></div>)}</section><section className="insight-card"><div className="insight-heading"><div className="insight-symbol"><Zap size={18}/></div><span>INSIGHT AUTOMÁTICO</span><span className="new-pill">NUEVO</span></div><h3>Buen desempeño comercial</h3><p>Los ingresos de octubre muestran una tendencia superior al mes anterior. Continúa monitoreando el ticket promedio y los productos con mayor rotación.</p><button className="insight-link" onClick={()=>setPage('Insights')}>Explorar insights <ChevronRight size={15}/></button></section></div></>:null}
- {page==='Ventas'&&<><div className="sales-summary"><div><span>Ventas en esta vista</span><b>{filteredSales.length}</b></div><div><span>Importe listado</span><b>{money(filteredSales.reduce((a,s)=>a+s.total,0))}</b></div><div><span>Pendientes de pago</span><b>{sales.filter(s=>s.status==='Pendiente').length}</b></div></div><div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar por número, cliente o estado..."/></div><button className="btn btn-secondary" onClick={()=>setSearch('')}><Filter size={15}/> Filtros <ChevronDown size={14}/></button></div><SalesTable sales={filteredSales} onClick={()=>notify('Selecciona “Nueva venta” para registrar una operación.')} full/><div className="table-footer"><span>Mostrando {filteredSales.length} de {sales.length} registros</span><div className="pagination"><button disabled><ChevronLeft size={15}/></button><button className="current">1</button><button disabled>2</button><button disabled><ChevronRight size={15}/></button></div></div></div></>}
+ {page==='Ventas'&&<><div className="sales-summary"><div><span>Ventas en esta vista</span><b>{filteredSales.length}</b></div><div><span>Importe listado</span><b>{money(filteredSales.reduce((a,s)=>a+s.total,0))}</b></div><div><span>Pendientes de pago</span><b>{sales.filter(s=>s.status==='Pendiente').length}</b></div></div><div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={17}/><input value={salesSearch} onChange={e=>setSalesSearch(e.target.value)} placeholder="Buscar por número, cliente, estado o documento..."/></div><button className="btn btn-secondary" onClick={()=>setShowSalesFilters(v=>!v)}><Filter size={15}/> Filtros <ChevronDown size={14}/></button><button className="btn btn-secondary" onClick={clearSalesFilters}><X size={15}/> Limpiar</button></div>{showSalesFilters&&<div style={{padding:'16px',margin:'0 0 16px',border:'1px solid #e1e5eb',borderRadius:12,background:'#fafbfc'}}><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(175px,1fr))',gap:12}}><label style={{display:'grid',gap:6,fontSize:13}}>Fecha desde<input type="date" value={salesDateFrom} max={salesDateTo||undefined} onChange={e=>setSalesDateFrom(e.target.value)} /></label><label style={{display:'grid',gap:6,fontSize:13}}>Fecha hasta<input type="date" value={salesDateTo} min={salesDateFrom||undefined} onChange={e=>setSalesDateTo(e.target.value)} /></label><label style={{display:'grid',gap:6,fontSize:13}}>Número de venta<input value={salesNumber} onChange={e=>setSalesNumber(e.target.value)} placeholder="Ej. VTA-2026-0084" /></label><label style={{display:'grid',gap:6,fontSize:13}}>Cliente<select value={salesCustomer} onChange={e=>setSalesCustomer(e.target.value)}><option value="">Todos los clientes</option>{[...new Set(sales.map(s=>s.customer).filter(Boolean))].sort().map(name=><option key={name} value={name}>{name}</option>)}</select></label><label style={{display:'grid',gap:6,fontSize:13}}>Estado<select value={salesStatus} onChange={e=>setSalesStatus(e.target.value)}><option value="">Todos los estados</option>{[...new Set(sales.map(s=>s.status).filter(Boolean))].sort().map(value=><option key={value} value={value}>{value}</option>)}</select></label><label style={{display:'grid',gap:6,fontSize:13}}>Tipo de documento<select value={salesDocumentType} onChange={e=>setSalesDocumentType(e.target.value)}><option value="">Todos los documentos</option>{[...new Set(sales.map(s=>getSaleDocument(s)).filter(Boolean))].sort().map(value=><option key={value} value={value}>{value}</option>)}</select></label><label style={{display:'grid',gap:6,fontSize:13}}>Monto mínimo (S/)<input type="number" min="0" step="0.01" value={salesMinAmount} onChange={e=>setSalesMinAmount(e.target.value)} placeholder="0.00" /></label><label style={{display:'grid',gap:6,fontSize:13}}>Monto máximo (S/)<input type="number" min="0" step="0.01" value={salesMaxAmount} onChange={e=>setSalesMaxAmount(e.target.value)} placeholder="Sin límite" /></label><label style={{display:'grid',gap:6,fontSize:13}}>Ordenar por<select value={salesSort} onChange={e=>setSalesSort(e.target.value)}><option value="date-desc">Fecha: más reciente</option><option value="date-asc">Fecha: más antigua</option><option value="amount-desc">Monto: mayor a menor</option><option value="amount-asc">Monto: menor a mayor</option><option value="number-asc">Número: ascendente</option><option value="number-desc">Número: descendente</option></select></label></div>{invalidSalesAmount&&<p style={{color:'#b42318',fontSize:13,marginBottom:0}}>El monto mínimo no puede ser mayor que el monto máximo.</p>}</div>}<SalesTable sales={filteredSales} onClick={()=>notify('Selecciona “Nueva venta” para registrar una operación.')} full/><div className="table-footer"><span>Mostrando {filteredSales.length} de {sales.length} registros</span><div className="pagination"><button disabled><ChevronLeft size={15}/></button><button className="current">1</button><button disabled>2</button><button disabled><ChevronRight size={15}/></button></div></div></div></>}
  {page==='Inventario'&&<><div className="kpi-grid"><Kpi icon={<Boxes/>} label="Referencias activas" value={String(products.length).padStart(2,'0')} change="Catálogo" note="productos"/><Kpi icon={<Package/>} label="Unidades disponibles" value={String(products.reduce((a,p)=>a+p.stock,0))} change="Stock actual" note="unidades"/><Kpi icon={<AlertCircle/>} label="Stock bajo" value={String(products.filter(p=>p.stock<8).length)} change="Requiere atención" note="referencias" positive={false}/><Kpi icon={<TrendingUp/>} label="Valor de inventario" value={money(products.reduce((a,p)=>a+p.price*p.stock,0))} change="Valor referencial" note="según precio actual"/></div><div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar producto o SKU..."/></div><button className="btn btn-primary" onClick={()=>{setModal('product');setPickSearch('')}}><Plus size={16}/> Nuevo producto</button></div><div className="table-scroll"><table><thead><tr><th>PRODUCTO</th><th>SKU</th><th>CATEGORÍA</th><th>PRECIO</th><th>STOCK</th><th>ESTADO</th></tr></thead><tbody>{products.filter(p=>(p.name+p.sku+p.category).toLowerCase().includes(search.toLowerCase())).map(p=><tr key={p.id}><td><div className="cell-product"><div className="small-product-icon"><Package size={17}/></div><b>{p.name}</b></div></td><td className="muted-cell">{p.sku}</td><td>{p.category}</td><td className="money-cell">{money(p.price)}</td><td><b>{p.stock}</b> <span className="muted-cell">unid.</span></td><td><span className={`status ${p.stock<8?'status-pending':'status-paid'}`}>{p.stock<8?'Stock bajo':'Disponible'}</span></td></tr>)}</tbody></table></div></div></>}
  {page==='Vendedores'&&<div className="panel placeholder-panel"><div className="placeholder-icon"><BriefcaseBusiness size={25}/></div><h2>Rendimiento de vendedores</h2><p>Consulta ventas, ingresos y promedio por vendedor. Esta sección quedará conectada a los registros de ventas y empleados.</p><div className="placeholder-metrics"><div><span>Vendedores activos</span><b>12</b></div><div><span>Ventas del periodo</span><b>247</b></div><div><span>Ticket promedio</span><b>S/ 1,152.83</b></div></div><button className="btn btn-primary" onClick={()=>notify('El módulo detallado se implementará conectado a la API.')}>Ver análisis de vendedores</button></div>}
  {page==='Analytics'&&<><div className="kpi-grid"><Kpi icon={<TrendingUp/>} label="Ingresos analizados" value="S/ 284,650" change="8.4%" note="vs. periodo anterior" positive/><Kpi icon={<Calculator/>} label="Media de venta" value="S/ 1,152.83" change="Media aritmética" note="por transacción"/><Kpi icon={<Activity/>} label="Mediana de venta" value="S/ 899.00" change="Valor central" note="de la distribución"/><Kpi icon={<Users/>} label="Clientes compradores" value="186" change="75.3%" note="de clientes activos" positive/></div><div className="dashboard-grid"><section className="panel revenue-panel"><div className="panel-head"><div><h3>Ingresos por periodo</h3><p>Datos agregados de las ventas</p></div></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><BarChart data={trend}><CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#e9eef4"/><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill:'#8794a7',fontSize:12}}/><YAxis axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} tick={{fill:'#8794a7',fontSize:11}}/><Tooltip formatter={(v)=>money(Number(v))}/><Bar dataKey="ventas" fill="#13b8c8" radius={[5,5,0,0]}/></BarChart></ResponsiveContainer></div></section><section className="panel orders-panel"><div className="panel-head"><div><h3>Resumen estadístico</h3><p>Semana 07 · Estadística aplicada</p></div></div><div className="stat-list"><div><span>Media aritmética</span><b>S/ 1,152.83</b></div><div><span>Mediana</span><b>S/ 899.00</b></div><div><span>Variable analizada</span><b>Monto de venta</b></div><div><span>Observaciones</span><b>247 registros</b></div></div></section></div><div className="info-note"><Sparkles size={18}/><div><b>Analítica basada en operaciones</b><p>Los indicadores finales deberán calcularse desde los datos persistidos en PostgreSQL mediante los servicios estadísticos de Python, según la arquitectura del proyecto.</p></div></div></>}
@@ -41,56 +47,163 @@ export default function App(){
 function Kpi({icon,label,value,change,note,positive=true}:any){return <div className="kpi-card"><div className="kpi-top"><div className="kpi-icon">{icon}</div><button className="dots-btn"><MoreHorizontal size={18}/></button></div><div className="kpi-label">{label}</div><div className="kpi-value">{value}</div><div className="kpi-foot"><span className={`kpi-change ${positive?'up':'down'}`}>{positive?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {change}</span><span>{note}</span></div></div>}
 function Legend({color,label,value,percent}:any){return <div className="legend-row"><span className="legend-name"><i style={{background:color}}/>{label}</span><span className="legend-values"><b>{value}</b><small>{percent}</small></span></div>}
 function SalesTable({sales,onClick,full=false}: {sales:Sale[],onClick:()=>void,full?:boolean}){return <div className="table-scroll"><table><thead><tr><th>N.º DE VENTA</th><th>CLIENTE</th><th>FECHA</th><th>ESTADO</th><th className="right">IMPORTE TOTAL</th><th></th></tr></thead><tbody>{sales.map(s=><tr key={s.id} onClick={onClick} className={full?'clickable-row':''}><td><span className="sale-id">{s.id}</span></td><td><div className="customer-cell"><div className="table-avatar">{s.customer.split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div><b>{s.customer}</b><small>{s.items} {s.items===1?'artículo':'artículos'}</small></div></div></td><td className="muted-cell">{s.date}</td><td><span className={`status ${s.status==='Pagada'?'status-paid':s.status==='Pendiente'?'status-pending':'status-cancelled'}`}><i/>{s.status}</span></td><td className="right money-cell">{money(s.total)}</td><td><button className="dots-btn" onClick={e=>{e.stopPropagation();onClick()}}><MoreHorizontal size={18}/></button></td></tr>)}</tbody></table>{sales.length===0&&<div className="empty-table">No hay ventas que coincidan con la búsqueda.</div>}</div>}
-type BayesSalesAnalysis = {
-  available: boolean;
-  message?: string;
-  sales_analyzed?: number;
-  repeat_customer_sales?: number;
-  high_value_threshold?: number;
-  high_value_sales?: number;
-  prior?: number;
-  likelihood?: number;
-  false_positive?: number;
-  posterior?: number;
-  interpretation?: string;
-};
-
 function BayesCard({ notify, apiBase }: any) {
-  const [analysis, setAnalysis] = useState<BayesSalesAnalysis | null>(null);
+  const [prior, setPrior] = useState(30);
+  const [likelihood, setLikelihood] = useState(70);
+  const [falsePositive, setFalsePositive] = useState(15);
+  const [result, setResult] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const loadAnalysis = async () => {
+  const calculate = async () => {
     if (!apiBase) {
       setError('Falta configurar VITE_API_URL con la URL pública de Render.');
       return;
     }
+
     setLoading(true);
     setError('');
+
     try {
-      const response = await fetch(`${apiBase}/probability/bayes/sales-analysis`);
-      const data: BayesSalesAnalysis = await response.json();
+      const response = await fetch(`${apiBase}/probability/bayes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prior,
+          likelihood,
+          false_positive: falsePositive
+        })
+      });
+
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(typeof (data as any).detail === 'string' ? (data as any).detail : 'No se pudo analizar las ventas.');
+        throw new Error(
+          typeof data.detail === 'string'
+            ? data.detail
+            : 'El backend no pudo calcular la probabilidad.'
+        );
       }
-      setAnalysis(data);
-      if (data.available) notify('Análisis de Bayes actualizado con las ventas registradas.');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo conectar con el servidor.');
-      setAnalysis(null);
+             e instanceof Error
+          ? e.message
+          : 'No se pudo conectar con el servidor de Render.'
+      );
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => { void loadAnalysis(); }, [apiBase]);
-
-  const result = analysis?.available && typeof analysis.posterior === 'number' ? analysis.posterior : null;
-  const percent = (value?: number) => typeof value === 'number' ? `${value.toFixed(2)}%` : '—';
 
   return (
     <div className="bayes-layout">
       <section className="panel bayes-form">
         <div className="panel-head">
           <div>
-            <h3>Bayes conectado a ventas</h3>
+            <h3>Calculadora de Bayes</h3>
+            <p>Introduce las probabilidades del escenario comercial.</p>
+          </div>
+          <div className="bayes-badge"><Calculator size={17} /></div>
+        </div>
+
+        <div className="info-note compact">
+          <CircleHelp size={17} />
+          <div>
+            <b>¿Qué vamos a calcular?</b>
+            <p>La probabilidad de que ocurra un evento A dado que se ha observado B.</p>
+          </div>
+        </div>
+
+        <RangeField
+          label="Probabilidad previa P(A)"
+          value={prior}
+          setValue={(value: number) => {
+            setPrior(value);
+            setResult(null);
+          }}
+          description="Probabilidad inicial del evento antes de observar la evidencia."
+        />
+
+        <RangeField
+          label="Probabilidad P(B | A)"
+          value={likelihood}
+          setValue={(value: number) => {
+            setLikelihood(value);
+            setResult(null);
+          }}
+          description="Probabilidad de observar la evidencia si A ocurre."
+        />
+
+        <RangeField
+          label="Probabilidad P(B | no A)"
+          value={falsePositive}
+          setValue={(value: number) => {
+            setFalsePositive(value);
+            setResult(null);
+          }}
+          description="Probabilidad de observar la evidencia si A no ocurre."
+        />
+
+        {error && (
+          <div className="info-note compact">
+            <AlertCircle size={17} />
+            <div>
+              <b>No se pudo calcular</b>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          className="btn btn-primary full-btn"
+          onClick={calculate}
+          disabled={loading}
+        >
+          <Calculator size={16} />
+          {loading ? 'Calculando en el servidor...' : 'Calcular con el servidor'}
+        </button>
+      </section>
+
+      <section className="panel bayes-result">
+        <div className="result-top">
+          <div className="result-icon"><Sparkles size={20} /></div>
+          <span>RESULTADO DEL ANÁLISIS</span>
+        </div>
+
+        <div className="result-number">
+          {result === null ? '—' : result.toFixed(2)}
+          {result !== null && <small>%</small>}
+        </div>
+
+        <h3>Probabilidad posterior P(A | B)</h3>
+        <p>
+          {result === null
+            ? 'Introduce los valores y pulsa calcular para consultar el resultado del backend.'
+            : 'Resultado calculado por el servicio estadístico de SalesIA.'}
+        </p>
+
+        <div className="probability-track">
+          <div style={{ width: `${result ?? 0}%` }} />
+        </div>
+
+        <div className="probability-labels">
+          <span>0%</span>
+          <b>{result === null ? 'Sin calcular' : `${result.toFixed(2)}%`}</b>
+          <span>100%</span>
+        </div>
+
+        <div className="formula">
+          <span>Teorema de Bayes</span>
+          <b>P(A|B) = P(B|A) × P(A) / P(B)</b>
+        </div>
+
+        <div className="result-caveat">
+          <AlertCircle size={16} />
+          <span>
+            El cálculo se ejecuta en Render. Este módulo todavía no guarda
+            un historial de análisis en PostgreSQL.
+          </span>
+        </div>
+      </section>
+    </div>
+  );
+}
+function RangeField({label,value,setValue,description}:any){return <div className="range-field"><div className="range-title"><label>{label}</label><b>{value}%</b></div><input type="range" min="0" max="100" value={value} onChange={e=>setValue(Number(e.target.value))}/><p>{description}</p></div>}
