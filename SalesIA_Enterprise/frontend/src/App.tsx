@@ -30,7 +30,7 @@ export default function App(){
  {page==='Inventario'&&<><div className="kpi-grid"><Kpi icon={<Boxes/>} label="Referencias activas" value={String(products.length).padStart(2,'0')} change="Catálogo" note="productos"/><Kpi icon={<Package/>} label="Unidades disponibles" value={String(products.reduce((a,p)=>a+p.stock,0))} change="Stock actual" note="unidades"/><Kpi icon={<AlertCircle/>} label="Stock bajo" value={String(products.filter(p=>p.stock<8).length)} change="Requiere atención" note="referencias" positive={false}/><Kpi icon={<TrendingUp/>} label="Valor de inventario" value={money(products.reduce((a,p)=>a+p.price*p.stock,0))} change="Valor referencial" note="según precio actual"/></div><div className="panel table-panel"><div className="table-toolbar"><div className="searchbox"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar producto o SKU..."/></div><button className="btn btn-primary" onClick={()=>{setModal('product');setPickSearch('')}}><Plus size={16}/> Nuevo producto</button></div><div className="table-scroll"><table><thead><tr><th>PRODUCTO</th><th>SKU</th><th>CATEGORÍA</th><th>PRECIO</th><th>STOCK</th><th>ESTADO</th></tr></thead><tbody>{products.filter(p=>(p.name+p.sku+p.category).toLowerCase().includes(search.toLowerCase())).map(p=><tr key={p.id}><td><div className="cell-product"><div className="small-product-icon"><Package size={17}/></div><b>{p.name}</b></div></td><td className="muted-cell">{p.sku}</td><td>{p.category}</td><td className="money-cell">{money(p.price)}</td><td><b>{p.stock}</b> <span className="muted-cell">unid.</span></td><td><span className={`status ${p.stock<8?'status-pending':'status-paid'}`}>{p.stock<8?'Stock bajo':'Disponible'}</span></td></tr>)}</tbody></table></div></div></>}
  {page==='Vendedores'&&<div className="panel placeholder-panel"><div className="placeholder-icon"><BriefcaseBusiness size={25}/></div><h2>Rendimiento de vendedores</h2><p>Consulta ventas, ingresos y promedio por vendedor. Esta sección quedará conectada a los registros de ventas y empleados.</p><div className="placeholder-metrics"><div><span>Vendedores activos</span><b>12</b></div><div><span>Ventas del periodo</span><b>247</b></div><div><span>Ticket promedio</span><b>S/ 1,152.83</b></div></div><button className="btn btn-primary" onClick={()=>notify('El módulo detallado se implementará conectado a la API.')}>Ver análisis de vendedores</button></div>}
  {page==='Analytics'&&<><div className="kpi-grid"><Kpi icon={<TrendingUp/>} label="Ingresos analizados" value="S/ 284,650" change="8.4%" note="vs. periodo anterior" positive/><Kpi icon={<Calculator/>} label="Media de venta" value="S/ 1,152.83" change="Media aritmética" note="por transacción"/><Kpi icon={<Activity/>} label="Mediana de venta" value="S/ 899.00" change="Valor central" note="de la distribución"/><Kpi icon={<Users/>} label="Clientes compradores" value="186" change="75.3%" note="de clientes activos" positive/></div><div className="dashboard-grid"><section className="panel revenue-panel"><div className="panel-head"><div><h3>Ingresos por periodo</h3><p>Datos agregados de las ventas</p></div></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><BarChart data={trend}><CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#e9eef4"/><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill:'#8794a7',fontSize:12}}/><YAxis axisLine={false} tickLine={false} tickFormatter={v=>`${v/1000}k`} tick={{fill:'#8794a7',fontSize:11}}/><Tooltip formatter={(v)=>money(Number(v))}/><Bar dataKey="ventas" fill="#13b8c8" radius={[5,5,0,0]}/></BarChart></ResponsiveContainer></div></section><section className="panel orders-panel"><div className="panel-head"><div><h3>Resumen estadístico</h3><p>Semana 07 · Estadística aplicada</p></div></div><div className="stat-list"><div><span>Media aritmética</span><b>S/ 1,152.83</b></div><div><span>Mediana</span><b>S/ 899.00</b></div><div><span>Variable analizada</span><b>Monto de venta</b></div><div><span>Observaciones</span><b>247 registros</b></div></div></section></div><div className="info-note"><Sparkles size={18}/><div><b>Analítica basada en operaciones</b><p>Los indicadores finales deberán calcularse desde los datos persistidos en PostgreSQL mediante los servicios estadísticos de Python, según la arquitectura del proyecto.</p></div></div></>}
- {page==='Probabilidad y Bayes'&&<BayesCard notify={notify}/>}
+ {page === 'Probabilidad y Bayes' && <BayesCard notify={notify} apiBase={API_BASE} />}
  {page==='Insights'&&<div className="insights-grid"><div className="insight-card"><div className="insight-heading"><div className="insight-symbol"><TrendingUp size={18}/></div><span>VENTAS</span><span className="new-pill">POSITIVO</span></div><h3>Tendencia de crecimiento</h3><p>Los ingresos del periodo muestran una evolución favorable respecto a meses anteriores. Verifica la tendencia con datos consolidados.</p><div className="evidence">Evidencia sugerida: variación mensual de ingresos.</div></div><div className="insight-card"><div className="insight-heading"><div className="insight-symbol amber"><AlertCircle size={18}/></div><span>INVENTARIO</span><span className="new-pill warning">ATENCIÓN</span></div><h3>Productos con stock bajo</h3><p>{products.filter(p=>p.stock<8).map(p=>p.name).join(', ')||'No hay productos bajo el umbral de stock.'}. Revisa la reposición antes de confirmar nuevas ventas.</p><div className="evidence">Evidencia: stock actual registrado.</div></div><div className="insight-card"><div className="insight-heading"><div className="insight-symbol purple"><Calculator size={18}/></div><span>ESTADÍSTICA</span></div><h3>Media y mediana</h3><p>Comparar el monto medio con la mediana ayuda a detectar si algunas ventas de importe elevado están influyendo en el promedio.</p><div className="evidence">Método: análisis de distribución de importes.</div></div></div>}
  {page==='Reportes'&&<div className="report-grid">{[['Reporte de ventas','Detalle de operaciones, estados e importes',FileText],['Reporte de productos','Catálogo, rotación y existencias',Package],['Reporte de clientes','Historial y comportamiento comercial',Users],['Reporte estadístico','Media, mediana y variables analizadas',Calculator],['Reporte de vendedores','Resultados por vendedor',BriefcaseBusiness],['Historial de análisis','Resultados guardados e insights',Activity]].map(([name,desc,Icon]:any)=><button className="report-card" key={name} onClick={()=>notify(`El ${name.toLowerCase()} se habilitará con la API.`)}><div className="report-icon"><Icon size={21}/></div><div><b>{name}</b><p>{desc}</p><span>Ver reporte <ChevronRight size={14}/></span></div><Download size={17} className="report-download"/></button>)}</div>}
  {page==='Seguridad'&&<><div className="sales-summary"><div><span>Usuarios registrados</span><b>08</b></div><div><span>Roles configurados</span><b>05</b></div><div><span>Estado de auditoría</span><b>Preparado</b></div></div><div className="panel table-panel"><div className="panel-head pad-head"><div><h3>Roles y permisos del sistema</h3><p>Propuesta de control de acceso por responsabilidad</p></div><button className="btn btn-secondary" onClick={()=>notify('La administración de usuarios se conectará con el backend.')}><Settings size={15}/> Configuración</button></div><div className="table-scroll"><table><thead><tr><th>ROL</th><th>RESPONSABILIDAD</th><th>ACCESO</th></tr></thead><tbody>{[['Administrador','Configuración, usuarios, roles y parámetros','Completo'],['Gerente','Indicadores, Analytics, reportes y resultados','Consulta'],['Vendedor','Registro de clientes, pedidos y ventas autorizadas','Comercial'],['Analista','Análisis estadístico, insights y reportes','Analítica'],['Almacén','Stock y movimientos de inventario','Inventario']].map(r=><tr key={r[0]}><td><b>{r[0]}</b></td><td>{r[1]}</td><td><span className="status status-paid">{r[2]}</span></td></tr>)}</tbody></table></div></div><div className="info-note"><ShieldCheck size={18}/><div><b>Seguridad de producción</b><p>La autenticación, permisos por endpoint, sesiones y auditoría requieren integración con FastAPI. Esta interfaz no simula que esos controles ya estén activos.</p></div></div></>}
@@ -41,5 +41,173 @@ export default function App(){
 function Kpi({icon,label,value,change,note,positive=true}:any){return <div className="kpi-card"><div className="kpi-top"><div className="kpi-icon">{icon}</div><button className="dots-btn"><MoreHorizontal size={18}/></button></div><div className="kpi-label">{label}</div><div className="kpi-value">{value}</div><div className="kpi-foot"><span className={`kpi-change ${positive?'up':'down'}`}>{positive?<ArrowUpRight size={13}/>:<ArrowDownRight size={13}/>} {change}</span><span>{note}</span></div></div>}
 function Legend({color,label,value,percent}:any){return <div className="legend-row"><span className="legend-name"><i style={{background:color}}/>{label}</span><span className="legend-values"><b>{value}</b><small>{percent}</small></span></div>}
 function SalesTable({sales,onClick,full=false}: {sales:Sale[],onClick:()=>void,full?:boolean}){return <div className="table-scroll"><table><thead><tr><th>N.º DE VENTA</th><th>CLIENTE</th><th>FECHA</th><th>ESTADO</th><th className="right">IMPORTE TOTAL</th><th></th></tr></thead><tbody>{sales.map(s=><tr key={s.id} onClick={onClick} className={full?'clickable-row':''}><td><span className="sale-id">{s.id}</span></td><td><div className="customer-cell"><div className="table-avatar">{s.customer.split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div><b>{s.customer}</b><small>{s.items} {s.items===1?'artículo':'artículos'}</small></div></div></td><td className="muted-cell">{s.date}</td><td><span className={`status ${s.status==='Pagada'?'status-paid':s.status==='Pendiente'?'status-pending':'status-cancelled'}`}><i/>{s.status}</span></td><td className="right money-cell">{money(s.total)}</td><td><button className="dots-btn" onClick={e=>{e.stopPropagation();onClick()}}><MoreHorizontal size={18}/></button></td></tr>)}</tbody></table>{sales.length===0&&<div className="empty-table">No hay ventas que coincidan con la búsqueda.</div>}</div>}
-function BayesCard({notify}:any){const [prior,setPrior]=useState(30);const [likelihood,setLikelihood]=useState(70);const [falsePositive,setFalsePositive]=useState(15);const a=prior/100*likelihood/100;const b=(1-prior/100)*falsePositive/100;const result=a/(a+b||1)*100;return <div className="bayes-layout"><section className="panel bayes-form"><div className="panel-head"><div><h3>Calculadora de Bayes</h3><p>Introduce las probabilidades del escenario comercial.</p></div><div className="bayes-badge"><Calculator size={17}/></div></div><div className="info-note compact"><CircleHelp size={17}/><div><b>¿Qué vamos a calcular?</b><p>La probabilidad de que ocurra un evento A dado que se ha observado B.</p></div></div><RangeField label="Probabilidad previa P(A)" value={prior} setValue={setPrior} description="Probabilidad inicial del evento antes de la evidencia."/><RangeField label="Probabilidad P(B | A)" value={likelihood} setValue={setLikelihood} description="Probabilidad de observar la evidencia si A ocurre."/><RangeField label="Probabilidad P(B | no A)" value={falsePositive} setValue={setFalsePositive} description="Probabilidad de observar la evidencia si A no ocurre."/><button className="btn btn-primary full-btn" onClick={()=>notify('Resultado calculado localmente. Para guardar análisis se requiere API.')}> <Calculator size={16}/> Calcular y guardar análisis</button></section><section className="panel bayes-result"><div className="result-top"><div className="result-icon"><Sparkles size={20}/></div><span>RESULTADO DEL ANÁLISIS</span></div><div className="result-number">{result.toFixed(2)}<small>%</small></div><h3>Probabilidad posterior P(A | B)</h3><p>Con los valores introducidos, esta es la probabilidad estimada del evento A después de observar la evidencia B.</p><div className="probability-track"><div style={{width:`${result}%`}}/></div><div className="probability-labels"><span>0%</span><b>{result.toFixed(2)}%</b><span>100%</span></div><div className="formula"><span>Teorema de Bayes</span><b>P(A|B) = P(B|A) × P(A) / P(B)</b></div><div className="result-caveat"><AlertCircle size={16}/><span>Ejemplo interactivo: confirma que las probabilidades de entrada estén bien definidas y sean coherentes para el caso real.</span></div></section></div>}
+function BayesCard({ notify, apiBase }: any) {
+  const [prior, setPrior] = useState(30);
+  const [likelihood, setLikelihood] = useState(70);
+  const [falsePositive, setFalsePositive] = useState(15);
+  const [result, setResult] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const calculate = async () => {
+    if (!apiBase) {
+      setError('Falta configurar VITE_API_URL con la URL pública de Render.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${apiBase}/probability/bayes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prior,
+          likelihood,
+          false_positive: falsePositive
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.detail === 'string'
+            ? data.detail
+            : 'El backend no pudo calcular la probabilidad.'
+        );
+      }
+
+      const posterior = Number(data.posterior);
+      if (!Number.isFinite(posterior) || posterior < 0 || posterior > 100) {
+        throw new Error('El backend devolvió un resultado no válido.');
+      }
+
+      setResult(posterior);
+      notify('Probabilidad calculada por el backend de SalesIA.');
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : 'No se pudo conectar con el servidor de Render.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bayes-layout">
+      <section className="panel bayes-form">
+        <div className="panel-head">
+          <div>
+            <h3>Calculadora de Bayes</h3>
+            <p>Introduce las probabilidades del escenario comercial.</p>
+          </div>
+          <div className="bayes-badge"><Calculator size={17} /></div>
+        </div>
+
+        <div className="info-note compact">
+          <CircleHelp size={17} />
+          <div>
+            <b>¿Qué vamos a calcular?</b>
+            <p>La probabilidad de que ocurra un evento A dado que se ha observado B.</p>
+          </div>
+        </div>
+
+        <RangeField
+          label="Probabilidad previa P(A)"
+          value={prior}
+          setValue={(value: number) => {
+            setPrior(value);
+            setResult(null);
+          }}
+          description="Probabilidad inicial del evento antes de observar la evidencia."
+        />
+
+        <RangeField
+          label="Probabilidad P(B | A)"
+          value={likelihood}
+          setValue={(value: number) => {
+            setLikelihood(value);
+            setResult(null);
+          }}
+          description="Probabilidad de observar la evidencia si A ocurre."
+        />
+
+        <RangeField
+          label="Probabilidad P(B | no A)"
+          value={falsePositive}
+          setValue={(value: number) => {
+            setFalsePositive(value);
+            setResult(null);
+          }}
+          description="Probabilidad de observar la evidencia si A no ocurre."
+        />
+
+        {error && (
+          <div className="info-note compact">
+            <AlertCircle size={17} />
+            <div>
+              <b>No se pudo calcular</b>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+
+        <button
+          className="btn btn-primary full-btn"
+          onClick={calculate}
+          disabled={loading}
+        >
+          <Calculator size={16} />
+          {loading ? 'Calculando en el servidor...' : 'Calcular con el servidor'}
+        </button>
+      </section>
+
+      <section className="panel bayes-result">
+        <div className="result-top">
+          <div className="result-icon"><Sparkles size={20} /></div>
+          <span>RESULTADO DEL ANÁLISIS</span>
+        </div>
+
+        <div className="result-number">
+          {result === null ? '—' : result.toFixed(2)}
+          {result !== null && <small>%</small>}
+        </div>
+
+        <h3>Probabilidad posterior P(A | B)</h3>
+        <p>
+          {result === null
+            ? 'Introduce los valores y pulsa calcular para consultar el resultado del backend.'
+            : 'Resultado calculado por el servicio estadístico de SalesIA.'}
+        </p>
+
+        <div className="probability-track">
+          <div style={{ width: `${result ?? 0}%` }} />
+        </div>
+
+        <div className="probability-labels">
+          <span>0%</span>
+          <b>{result === null ? 'Sin calcular' : `${result.toFixed(2)}%`}</b>
+          <span>100%</span>
+        </div>
+
+        <div className="formula">
+          <span>Teorema de Bayes</span>
+          <b>P(A|B) = P(B|A) × P(A) / P(B)</b>
+        </div>
+
+        <div className="result-caveat">
+          <AlertCircle size={16} />
+          <span>
+            El cálculo se ejecuta en Render. Este módulo todavía no guarda
+            un historial de análisis en PostgreSQL.
+          </span>
+        </div>
+      </section>
+    </div>
+  );
+}
 function RangeField({label,value,setValue,description}:any){return <div className="range-field"><div className="range-title"><label>{label}</label><b>{value}%</b></div><input type="range" min="0" max="100" value={value} onChange={e=>setValue(Number(e.target.value))}/><p>{description}</p></div>}
